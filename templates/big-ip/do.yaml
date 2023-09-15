@@ -1,0 +1,78 @@
+$schema: https://raw.githubusercontent.com/F5Networks/f5-declarative-onboarding/v1.40.0/src/schema/1.40.0/base.schema.json  # yamllint disable-line rule:line-length
+schemaVersion: 1.40.0
+class: Device
+async: true
+label: f5-bigip-ts-gcp-autoscaling
+Common:
+  class: Tenant
+  system:
+    class: System
+    autoPhonehome: true
+    hostname: '{{{ SHORTNAME }}}.${domain_name}'
+  dns:
+    class: DNS
+    nameServers:
+      - 169.254.169.254
+  ntp:
+    class: NTP
+    timezone: UTC
+    servers:
+      - 169.254.169.254
+  provision:
+    class: Provision
+    ltm: nominal
+  admin:
+    class: User
+    userType: regular
+    password: '{{{ ADMIN_PASSWORD }}}'
+    shell: bash
+    keys: ${jsonencode(ssh_keys)}
+  primary:
+    class: VLAN
+    tag: 4094
+    mtu: '{{{ SELF_IP_PRIMARY_MTU }}}'
+    interfaces:
+      - name: '1.0'
+        tagged: false
+  primary-self:
+    class: SelfIp
+    address: '{{{ SELF_IP_PRIMARY_ADDRESS }}}/32'
+    vlan: primary
+    allowService:
+      - 'tcp:80'
+      - 'tcp:443'
+      - 'tcp:${livez_port}'
+    trafficGroup: traffic-group-local-only
+  primary-rt-gw:
+    class: Route
+    target: primary
+    network: '{{{ SELF_IP_PRIMARY_GATEWAY }}}/32'
+    mtu: '{{{ SELF_IP_PRIMARY_MTU }}}'
+  primary-rt-net:
+    class: Route
+    gw: '{{{ SELF_IP_PRIMARY_GATEWAY }}}'
+    network: '{{{ SELF_IP_PRIMARY_NETWORK }}}/{{{ SELF_IP_PRIMARY_SIZE }}}'
+    mtu: '{{{ SELF_IP_SECONDARY_MTU }}}'
+  secondary:
+    class: VLAN
+    tag: 4092
+    mtu: '{{{ SELF_IP_SECONDARY_MTU }}}'
+    interfaces:
+      - name: '1.2'
+        tagged: false
+  secondary-self:
+    class: SelfIp
+    address: '{{{ SELF_IP_SECONDARY_ADDRESS }}}/32'
+    vlan: secondary
+    allowService: none
+    trafficGroup: traffic-group-local-only
+  secondary-rt-gw:
+    class: Route
+    target: secondary
+    network: '{{{ SELF_IP_SECONDARY_GATEWAY }}}/32'
+    mtu: '{{{ SELF_IP_SECONDARY_MTU }}}'
+  secondary-rt-net:
+    class: Route
+    gw: '{{{ SELF_IP_SECONDARY_GATEWAY }}}'
+    network: '{{{ SELF_IP_SECONDARY_NETWORK }}}/{{{ SELF_IP_SECONDARY_SIZE }}}'
+    mtu: '{{{ SELF_IP_SECONDARY_MTU }}}'

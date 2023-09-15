@@ -1,0 +1,25 @@
+$schema: https://raw.githubusercontent.com/F5Networks/f5-telemetry-streaming/v1.33.0/src/schema/1.33.0/base_schema.json
+schemaVersion: 1.33.0
+class: Telemetry
+controls:
+  class: Controls
+  logLevel: info
+  debug: false
+system:
+  class: Telemetry_System
+  systemPoller:
+    interval: 60
+    # For this demo only care about the systen CPU metrics
+    actions:
+      - includeData: {}
+        locations:
+          system:
+            "[Cc]pu": true
+# Send system/tmmCpu and system/cpu metrics to Google Cloud Monitoring
+monitoring:
+  class: Telemetry_Consumer
+  type: Google_Cloud_Monitoring
+  projectId: ${project_id}
+  serviceEmail: ${service_account}
+  reportInstanceMetadata: true
+  useServiceAccountToken: true

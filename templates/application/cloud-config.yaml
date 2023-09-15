@@ -1,0 +1,66 @@
+#cloud-config
+# yamllint disable rule:document-start
+---
+write_files:
+  - path: /etc/systemd/system/iptables-app.service
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      [Unit]
+      Description=Configure iptables for PiService
+      After=gcr-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=/sbin/iptables -w -A INPUT -p tcp --dport 8443 -j ACCEPT
+      ExecStart=/sbin/iptables -w -A INPUT -p tcp --dport 8080 -j ACCEPT
+      ExecStart=/sbin/ip6tables -w -A INPUT -p tcp --dport 8443 -j ACCEPT
+      ExecStart=/sbin/ip6tables -w -A INPUT -p tcp --dport 8080 -j ACCEPT
+
+      [Install]
+      WantedBy=multi-user.target
+  - path: /etc/systemd/system/app.service
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      [Unit]
+      Description=PiService application
+      After=gcr-online.target iptables-app.service
+
+      [Service]
+      ExecStart=/usr/bin/docker run --name pi \
+        -p 8443:8443 -p 8080:8080 \
+        --mount type=bind,src=/var/lib/pi,dst=/var/lib/pi,readonly \
+        --restart unless-stopped \
+        ghcr.io/memes/pi:v2.0.2 server \
+          --cacert /var/lib/pi/ca.pem \
+          --cert /var/lib/pi/cert.pem \
+          --key /var/lib/pi/key.pem \
+          --rest-address :8080 \
+          :8443
+      ExecStop=/usr/bin/docker stop pi
+      ExecStopPost=/usr/bin/docker rm pi
+
+      [Install]
+      WantedBy=multi-user.target
+  - path: /var/lib/pi/ca.pem
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      ${indent(6, chomp(ca_pem))}
+  - path: /var/lib/pi/cert.pem
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      ${indent(6, chomp(cert_pem))}
+  - path: /var/lib/pi/key.pem
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      ${indent(6, chomp(key_pem))}
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable iptables-app.service
+  - systemctl start iptables-app.service
+  - systemctl enable app.service
+  - systemctl start app.service

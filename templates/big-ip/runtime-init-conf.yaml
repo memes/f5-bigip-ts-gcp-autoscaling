@@ -1,0 +1,143 @@
+#
+---
+controls:
+  logLevel: info
+  extensionInstallDelayInMs: 60000
+runtime_parameters:
+  - name: ADMIN_PASSWORD
+    type: secret
+    secretProvider:
+      environment: gcp
+      type: SecretsManager
+      version: latest
+      secretId: ${admin_pass_secret}
+  - name: SHORTNAME
+    type: url
+    value: http://169.254.169.254/computeMetadata/v1/instance/name
+    returnType: string
+    headers:
+      - name: Metadata-Flavor
+        value: Google
+  - name: SELF_IP_PRIMARY_ADDRESS
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      index: 0
+      field: ip
+      ipcalc: address
+  - name: SELF_IP_PRIMARY_GATEWAY
+    type: url
+    value: http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/0/?recursive=true
+    query: gateway
+    returnType: string
+    headers:
+      - name: Metadata-Flavor
+        value: Google
+  - name: SELF_IP_PRIMARY_MTU
+    type: url
+    value: http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/0/?recursive=true
+    query: mtu
+    returnType: number
+    headers:
+      - name: Metadata-Flavor
+        value: Google
+  - name: SELF_IP_PRIMARY_NETWORK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      index: 0
+      field: ip
+      ipcalc: base
+  - name: SELF_IP_PRIMARY_SIZE
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      index: 0
+      field: ip
+      ipcalc: bitmask
+  - name: SELF_IP_SECONDARY_ADDRESS
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      index: 2
+      field: ip
+      ipcalc: address
+  - name: SELF_IP_SECONDARY_GATEWAY
+    type: url
+    value: http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/2/?recursive=true
+    query: gateway
+    returnType: string
+    headers:
+      - name: Metadata-Flavor
+        value: Google
+  - name: SELF_IP_SECONDARY_MTU
+    type: url
+    value: http://169.254.169.254/computeMetadata/v1/instance/network-interfaces/2/?recursive=true
+    query: mtu
+    returnType: number
+    headers:
+      - name: Metadata-Flavor
+        value: Google
+  - name: SELF_IP_SECONDARY_NETWORK
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      index: 2
+      field: ip
+      ipcalc: base
+  - name: SELF_IP_SECONDARY_SIZE
+    type: metadata
+    metadataProvider:
+      environment: gcp
+      type: network
+      index: 2
+      field: ip
+      ipcalc: bitmask
+pre_onboard_enabled:
+  - name: provision_rest
+    type: inline
+    commands:
+      - /usr/bin/setdb provision.extramb 1536 || true
+      - /usr/bin/setdb restjavad.useextramb true || true
+extension_packages:
+  install_operations:
+    - extensionType: do
+      extensionHash: 4039c462d710224f76cd0831037aac7bef345dd67534b4c1336f461769f2ab71
+      extensionVersion: 1.40.0
+      extensionUrl: https://github.com/F5Networks/f5-declarative-onboarding/releases/download/v1.40.0/f5-declarative-onboarding-1.40.0-8.noarch.rpm  # yamllint disable-line rule:line-length
+    - extensionType: as3
+      extensionHash: 2263be843a56eb0872ce0f5ce5d224f04ca42e9b44c5ff741d4ba32c8e47fdb3
+      extensionVersion: 3.47.0
+      extensionUrl: https://github.com/F5Networks/f5-appsvcs-extension/releases/download/v3.47.0/f5-appsvcs-3.47.0-8.noarch.rpm  # yamllint disable-line rule:line-length
+    - extensionType: ts
+      extensionHash: 573d8cf589d545b272250ea19c9c124cf8ad5bcdd169dbe2139e82ce4d51a449
+      extensionVersion: 1.33.0
+      extensionUrl: https://github.com/F5Networks/f5-telemetry-streaming/releases/download/v1.33.0/f5-telemetry-1.33.0-1.noarch.rpm  # yamllint disable-line rule:line-length
+extension_services:
+  service_operations:
+    - extensionType: do
+      type: inline
+      value:
+        ${indent(8, chomp(do_yaml))}
+    - extensionType: as3
+      type: inline
+      value:
+        ${indent(8, chomp(as3_initial_yaml))}
+    - extensionType: ts
+      type: inline
+      value:
+        ${indent(8, chomp(ts_yaml))}
+    - extensionType: as3
+      type: inline
+      value:
+        ${indent(8, chomp(as3_app_yaml))}
+post_onboard_enabled:
+  - name: save_config
+    type: inline
+    commands:
+      - tmsh save sys config

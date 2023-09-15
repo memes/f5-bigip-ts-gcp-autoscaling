@@ -1,0 +1,139 @@
+class: AS3
+action: deploy
+declaration:
+  $schema: https://raw.githubusercontent.com/F5Networks/f5-appsvcs-extension/v3.47.0/schema/3.47.0/as3-schema.json
+  class: ADC
+  schemaVersion: 3.47.0
+  id: f5-bigip-ts-gcp-autoscaling-apps
+  label: f5-bigip-ts-gcp-autoscaling-apps
+  remark: Declares the REST and gRPC services exposed for Pi application
+  applications:
+    class: Tenant
+    Shared:
+      class: Application
+      template: shared
+      vip:
+        class: Service_Address
+        remark: The VIP exposed to public through GCP forwarding-rule
+        virtualAddress: ${vip}
+    pi:
+      class: Application
+      label: pi-app
+      template: generic
+      grpc:
+        class: Service_HTTPS
+        remark: Exposes a gRPC endpoint for Pi service
+        pool: grpc_pool
+        virtualAddresses:
+          - use: /applications/Shared/vip
+        virtualPort: 443
+        redirect80: false
+        snat: auto
+        serverTLS: grpc_client_tls
+        clientTLS: grpc_server_tls
+        httpMrfRoutingEnabled: true
+        profileHTTP: basic
+        profileHTTP2:
+          use: grpc_http2
+      grpc_http2:
+        class: HTTP2_Profile
+        activationMode: alpn
+        enforceTlsRequirements: true
+      rest:
+        class: Service_HTTPS
+        remark: Exposes a REST endpoint for Pi service
+        pool: rest_pool
+        virtualAddresses:
+          - use: /applications/Shared/vip
+        virtualPort: 8443
+        redirect80: false
+        snat: auto
+        serverTLS: rest_client_tls
+        clientTLS: rest_server_tls
+        profileHTTP: basic
+      grpc_pool:
+        class: Pool
+        remark: The set of Pi servers that expose a gRPC endpoint
+        monitors:
+          - use: validating_pi_rest
+        members:
+          - addressDiscovery: gce
+            addressRealm: private
+            servicePort: 8443
+            region: ${region}
+            tagKey: service
+            tagValue: pi
+            updateInterval: 2
+      rest_pool:
+        class: Pool
+        remark: The set of Pi servers that expose a REST endpoint
+        monitors:
+          - use: validating_pi_rest
+        members:
+          - addressDiscovery: gce
+            addressRealm: private
+            servicePort: 8080
+            region: ${region}
+            tagKey: service
+            tagValue: pi
+            updateInterval: 2
+      validating_pi_rest:
+        class: Monitor
+        remark: Validates the Pi service via REST with TLS check
+        monitorType: https
+        clientTLS:
+          use: rest_server_tls
+        send: 'GET /api/v2/digit/0\\r\\n\\r\\n'
+        targetPort: 8080
+      default_cert:
+        class: Certificate
+        remark: Use the default certificate and key pair
+        certificate:
+          bigip: /Common/default.crt
+        privateKey:
+          bigip: /Common/default.key
+      validation_ca:
+        class: CA_Bundle
+        remark: A CA bundle that can validate Pi service TLS
+        bundle: |
+          ${indent(10, chomp(ca_cert))}
+      grpc_server_tls:
+        class: TLS_Client
+        remark: SSL Server profile for gRPC that validates the backend TLS cert
+        clientCertificate: default_cert
+        ignoreExpired: false
+        ignoreUntrusted: false
+        renegotiationEnabled: false
+        trustCA:
+          use: validation_ca
+        validateCertificate: true
+      grpc_client_tls:
+        class: TLS_Server
+        remark: SSL Client profile to expose gRPC service to internet
+        certificates:
+          - certificate: default_cert
+            sniDefault: true
+        renegotiationEnabled: false
+      rest_server_tls:
+        class: TLS_Client
+        remark: SSL Server profile that validates the backend TLS certificate
+        clientCertificate: default_cert
+        ignoreExpired: false
+        ignoreUntrusted: false
+        trustCA:
+          use: validation_ca
+        validateCertificate: true
+      rest_client_tls:
+        class: TLS_Server
+        remark: SSL Client profile to expose REST service to internet
+        certificates:
+          - certificate: default_cert
+            sniDefault: true
+      readyz:
+        class: Service_HTTP
+        remark: Return 200 status to accept traffic for pi
+        iRules:
+          - use: /Common/Shared/hc_respond_200
+        virtualPort: ${readyz_port}
+        virtualAddresses:
+          - use: /applications/Shared/vip

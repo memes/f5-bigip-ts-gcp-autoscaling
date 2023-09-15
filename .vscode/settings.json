@@ -1,5 +1,10 @@
 {
     "yaml.schemas": {
-        "https://json.schemastore.org/github-issue-config.json": ".github/ISSUE_TEMPLATE/config.yml"
+        "https://json.schemastore.org/github-issue-config.json": ".github/ISSUE_TEMPLATE/config.yml",
+        "https://raw.githubusercontent.com/F5Networks/f5-appsvcs-extension/v3.47.0/schema/3.47.0/as3-schema.json": "templates/big-ip/as3_*.yaml",
+        "https://raw.githubusercontent.com/canonical/cloud-init/main/cloudinit/config/schemas/versions.schema.cloud-config.json": "templates/*/cloud-config.yaml",
+        "https://raw.githubusercontent.com/F5Networks/f5-declarative-onboarding/v1.40.0/src/schema/1.40.0/base.schema.json": "templates/big-ip/do.yaml",
+        "https://raw.githubusercontent.com/F5Networks/f5-bigip-runtime-init/publish-1.6.2-1/src/schema/base_schema.json": "templates/big-ip/runtime-init-conf.yaml",
+        "https://raw.githubusercontent.com/F5Networks/f5-telemetry-streaming/v1.33.0/src/schema/1.33.0/base_schema.json": "templates/big-ip/ts.yaml"
     }
 }

@@ -1,0 +1,75 @@
+#cloud-config
+# This is a base cloud-init template that can onboard a BIG-IP with self IPs
+# assigned.
+# yamllint disable rule:line-length
+---
+write_files:
+  - path: /config/cloud/onboard.sh
+    permissions: '0755'
+    owner: 'root:root'
+    content: |
+      ${indent(6, onboard_sh)}
+  - path: /config/cloud/reset_management_route.sh
+    permissions: '0755'
+    owner: 'root:root'
+    content: |
+      ${indent(6, reset_management_route_sh)}
+  - path: /etc/systemd/system/f5-gce-onboard.service
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      [Unit]
+      Description=BIG-IP onboarding
+      After=httpd.service f5-startup.service
+
+      [Service]
+      Type=simple
+      Environment=${join(" ", [for k,v in try(onboard_env, {}): format("%s=\"%s\"", k, v) if coalesce(v, "unspecified") != "unspecified"])}
+      ExecStart=/config/cloud/onboard.sh
+
+      [Install]
+      WantedBy=multi-user.target
+  - path: /etc/systemd/system/f5-gce-management-route.service
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      [Unit]
+      Description=Reset BIG-IP management route if necessary
+      After=httpd.service f5-startup.service
+
+      [Service]
+      Type=simple
+      Environment=${join(" ", [for k,v in try(management_route_env, {}): format("%s=\"%s\"", k, v) if coalesce(v, "unspecified") != "unspecified"])}
+      ExecStart=/config/cloud/reset_management_route.sh
+
+      [Install]
+      WantedBy=multi-user.target
+  - path: /config/cloud/runtime-init-conf.yaml
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      ${indent(6, chomp(runtime_init_conf_yaml))}
+  - path: /config/cloud/app.yaml
+    permissions: '0644'
+    owner: 'root:root'
+    content: |
+      ---
+      controls:
+        logLevel: info
+        extensionInstallDelayInMs: 60000
+      extension_services:
+        service_operations:
+          - extensionType: as3
+            type: inline
+            value:
+              ${indent(14, chomp(as3_app_yaml))}
+      post_onboard_enabled:
+        - name: save_config
+          type: inline
+          commands:
+            - tmsh save sys config
+
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable f5-gce-onboard.service
+  - systemctl start f5-gce-onboard.service

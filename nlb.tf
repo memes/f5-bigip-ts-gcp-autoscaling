@@ -10,7 +10,7 @@ resource "google_compute_region_health_check" "readyz" {
   healthy_threshold   = 2
   unhealthy_threshold = 2
   http_health_check {
-    port               = 26000
+    port               = var.health_check_port
     request_path       = "/"
     response           = "OK"
     port_specification = "USE_FIXED_PORT"
@@ -38,7 +38,7 @@ resource "google_compute_firewall" "readyz" {
   allow {
     protocol = "TCP"
     ports = [
-      26000,
+      var.health_check_port,
     ]
   }
 }

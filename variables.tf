@@ -119,3 +119,18 @@ variable "permitted_cidrs" {
   BIG-IP. Default is an empty set which will trigger the use of detected IPv4 address of module user.
   EOD
 }
+
+variable "health_check_port" {
+  type     = number
+  nullable = false
+  validation {
+    condition     = floor(var.health_check_port) == var.health_check_port && var.health_check_port > 0 && var.health_check_port < 65536
+    error_message = "The health_check_port must be an integer between 1 and 65535 inclusive."
+  }
+  default     = 26000
+  description = <<-EOD
+  The TCP port to use for Google health check(s). A BIG-IP virtual server must be listening on this port configured to
+  respond with 200 when alive and/or ready.
+  Default value is 26000.
+  EOD
+}

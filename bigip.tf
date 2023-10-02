@@ -128,10 +128,10 @@ resource "google_compute_instance_template" "bigip" {
         do_yaml = templatefile(format("%s/templates/big-ip/do.yaml", path.module), {
           domain_name = var.domain_name
           ssh_keys    = var.ssh_keys
-          livez_port  = 26000
+          livez_port  = var.health_check_port
         })
         as3_initial_yaml = templatefile(format("%s/templates/big-ip/as3_initial.yaml", path.module), {
-          livez_port = 26000
+          livez_port = var.health_check_port
         })
         ts_yaml = templatefile(format("%s/templates/big-ip/ts.yaml", path.module), {
           project_id      = var.project_id
@@ -139,7 +139,7 @@ resource "google_compute_instance_template" "bigip" {
         })
         as3_app_yaml = templatefile(format("%s/templates/big-ip/as3_app.yaml", path.module), {
           vip         = google_compute_address.vip.address
-          readyz_port = 26000
+          readyz_port = var.health_check_port
           ca_cert     = tls_self_signed_cert.ca.cert_pem
           region      = var.region
         })
@@ -165,7 +165,7 @@ resource "google_compute_health_check" "bigip_livez" {
   healthy_threshold   = 2
   unhealthy_threshold = 3
   http_health_check {
-    port               = 26000
+    port               = var.health_check_port
     request_path       = "/"
     response           = "OK"
     port_specification = "USE_FIXED_PORT"
@@ -257,7 +257,7 @@ resource "google_compute_firewall" "bigip_livez" {
   allow {
     protocol = "TCP"
     ports = [
-      26000,
+      var.var.health_check_port,
     ]
   }
 }

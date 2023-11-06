@@ -46,7 +46,7 @@ resource "google_project_iam_member" "bigip" {
 # Create a secret containing the admin user password
 module "admin_password" {
   source     = "memes/secret-manager/google"
-  version    = "2.1.1"
+  version    = "2.2.0"
   project_id = var.project_id
   id         = format("%s-bigip", var.name)
   secret     = var.admin_password

@@ -92,7 +92,7 @@ module "internal" {
 
 module "restricted_apis_dns" {
   source     = "memes/restricted-apis-dns/google"
-  version    = "1.2.0"
+  version    = "1.3.0"
   project_id = var.project_id
   name       = format("%s-restricted-apis", var.name)
   labels     = var.labels

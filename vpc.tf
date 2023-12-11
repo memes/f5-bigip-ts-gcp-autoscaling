@@ -4,7 +4,7 @@
 
 module "external" {
   source      = "memes/multi-region-private-network/google"
-  version     = "2.0.0"
+  version     = "2.1.0"
   name        = format("%s-external", var.name)
   description = "External network (public facing)"
   project_id  = var.project_id
@@ -32,7 +32,7 @@ module "external" {
 
 module "management" {
   source      = "memes/multi-region-private-network/google"
-  version     = "2.0.0"
+  version     = "2.1.0"
   name        = format("%s-management", var.name)
   description = "Management network (control plane)"
   project_id  = var.project_id
@@ -62,7 +62,7 @@ module "management" {
 
 module "internal" {
   source      = "memes/multi-region-private-network/google"
-  version     = "2.0.0"
+  version     = "2.1.0"
   name        = format("%s-internal", var.name)
   description = "Internal network (applications)"
   project_id  = var.project_id
